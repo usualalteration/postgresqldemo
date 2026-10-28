@@ -1,5 +1,6 @@
-# Unico prompt con cui ho realizzato l'app su Trustant
+# Prompt for Trustant
 
+```
 # Build a PostgreSQL Task Manager
 
 Create a complete, working **Task Manager** application to demonstrate PostgreSQL integration with React and Nuvolaris OpenServerless.
@@ -56,3 +57,117 @@ Include loading states, empty states, error feedback and success notifications.
 - Run the available frontend and backend validation tools, fix any detected issues, and report the final result.
 
 Keep the implementation simple and focused on demonstrating **React → OpenServerless Python actions → PostgreSQL**.
+```
+
+# What database is generated
+
+## PostgreSQL Task Manager Database
+
+The Task Manager application uses PostgreSQL to store tasks and track database initialization.
+
+The database contains two tables: `tasks` and `app_seed_meta`.
+
+### Tasks Table
+
+The `tasks` table stores all tasks managed by the application.
+
+| Column | Type | Description |
+|---|---|---|
+| id | BIGSERIAL | Auto-generated primary key |
+| title | VARCHAR(200) | Task title, required |
+| description | TEXT | Task description, defaults to empty string |
+| status | VARCHAR(20) | To Do, In Progress, or Done |
+| priority | VARCHAR(10) | Low, Medium, or High |
+| created_at | TIMESTAMPTZ | Task creation timestamp |
+| updated_at | TIMESTAMPTZ | Last modification timestamp |
+
+### SQL Schema
+
+```sql
+CREATE TABLE IF NOT EXISTS tasks (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    status VARCHAR(20) NOT NULL DEFAULT 'To Do'
+        CHECK (status IN ('To Do', 'In Progress', 'Done')),
+    priority VARCHAR(10) NOT NULL DEFAULT 'Medium'
+        CHECK (priority IN ('Low', 'Medium', 'High')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_status
+    ON tasks (status);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_created_at
+    ON tasks (created_at DESC);
+```
+
+### Seed Metadata Table
+
+The `app_seed_meta` table tracks database initialization to prevent duplicate sample data.
+
+| Column | Type | Description |
+|---|---|---|
+| key | VARCHAR(100) | Unique seed identifier, primary key |
+| seeded_at | TIMESTAMPTZ | Timestamp of initialization |
+
+### SQL Schema
+
+```sql
+CREATE TABLE IF NOT EXISTS app_seed_meta (
+    key VARCHAR(100) PRIMARY KEY,
+    seeded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### Initial Sample Data
+
+The application creates six sample tasks during the first database initialization.
+
+| Title | Status | Priority |
+|---|---|---|
+| Design PostgreSQL schema | Done | High |
+| Implement task CRUD actions | In Progress | High |
+| Build the dashboard UI | In Progress | Medium |
+| Write endpoint tests | To Do | Medium |
+| Set up CI pipeline | To Do | Low |
+| Polish accessibility | To Do | Low |
+
+Each task also includes a description explaining its purpose.
+
+### Database Initialization
+
+The initialization function:
+
+1. Creates the `tasks` table if it does not exist.
+2. Creates indexes on `status` and `created_at`.
+3. Creates the `app_seed_meta` table if necessary.
+4. Checks whether the marker `tasks-sample-data-v1` exists.
+5. Inserts the six sample tasks only if the marker is absent.
+6. Saves the marker to prevent duplicate initialization.
+7. Commits the transaction and returns the total number of tasks.
+
+The operation is idempotent when executed sequentially and can be repeated without duplicating sample tasks.
+
+### PostgreSQL Integration
+
+The database is accessed through Python actions running on Nuvolaris OpenServerless.
+
+The PostgreSQL connection is provided through `ctx.POSTGRESQL`, configured using the `action_add_postgresql` tool.
+
+All database operations use parameterized SQL queries to prevent SQL injection.
+
+The React frontend communicates with OpenServerless actions, which execute SQL statements against PostgreSQL.
+
+**Architecture:** React → OpenServerless Python Actions → PostgreSQL
+
+### Important Notes
+
+- PostgreSQL is the persistent storage layer.
+- Tasks remain available after refreshing the React application.
+- The `status` and `priority` fields enforce allowed values through SQL constraints.
+- Timestamps are stored with timezone information.
+- `updated_at` is initialized automatically but must be explicitly updated by CRUD actions using `NOW()`.
+- The seed marker prevents repeated initialization in sequential executions; concurrent initializations require additional synchronization.
+
