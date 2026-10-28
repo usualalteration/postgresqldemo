@@ -1,4 +1,4 @@
-# Unico prompt con cui ho realizzato l'app
+# Unico prompt con cui ho realizzato l'app su Trustant
 
 # Build a PostgreSQL Task Manager
 
